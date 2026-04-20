@@ -1,13 +1,21 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'https://SEU_BACKEND_RENDER_URL',
+  baseURL:
+    import.meta.env.VITE_API_BASE_URL ||
+    'https://SEU_BACKEND_RENDER_URL',
   timeout: 10000,
 })
 
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (!error.response) {
+      return Promise.reject(
+        new Error('Falha de conexao com o servidor. Verifique sua rede e tente novamente.'),
+      )
+    }
+
     const message =
       error.response?.data?.message ||
       'Nao foi possivel concluir a operacao. Tente novamente.'
