@@ -10,6 +10,7 @@ import {
   Menu,
   X,
 } from 'lucide-react'
+import imagemClinicaPsico from '../assets/imagemclinicapsico.png'
 
 const navigation = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -34,24 +35,30 @@ export default function AppLayout() {
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,_rgba(12,123,179,0.18),_transparent_35%),radial-gradient(circle_at_left,_rgba(14,165,233,0.15),_transparent_45%)]" />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-72 transform border-r border-slate-200 bg-white/95 p-6 shadow-soft backdrop-blur-md transition-transform duration-300 md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-72 transform overflow-hidden border-r border-sky-200 bg-sky-100/55 p-6 shadow-soft backdrop-blur-md transition-transform duration-300 md:translate-x-0 ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="mb-10 flex items-center justify-between">
+        <div
+          className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat opacity-35"
+          style={{ backgroundImage: `url(${imagemClinicaPsico})` }}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-sky-100/55" />
+
+        <div className="relative mb-10 flex items-center justify-between">
           <Link to="/" className="font-heading text-xl font-semibold text-brand-700">
-            Clinica SaaS
+            Clinica Ferreira
           </Link>
           <button
             type="button"
-            className="rounded-lg border border-slate-200 p-2 text-slate-600 md:hidden"
+            className="rounded-lg border border-sky-200 bg-white/70 p-2 text-slate-700 md:hidden"
             onClick={() => setIsSidebarOpen(false)}
           >
             <X size={18} />
           </button>
         </div>
 
-        <nav className="space-y-2">
+        <nav className="relative space-y-2">
           {navigation.map((item) => {
             const Icon = item.icon
 
@@ -63,8 +70,8 @@ export default function AppLayout() {
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-brand-50 text-brand-700'
-                      : 'text-slate-600 hover:bg-slate-100'
+                      ? 'bg-white/70 text-brand-700 shadow-sm'
+                      : 'text-slate-700 hover:bg-white/55'
                   }`
                 }
               >
@@ -95,7 +102,7 @@ export default function AppLayout() {
                 DR
               </div>
               <div className="text-sm">
-                <p className="font-semibold text-slate-900">Dra. Amanda</p>
+                <p className="font-semibold text-slate-900">Dr. Fernando F. Da Silva</p>
                 <p className="text-slate-500">Psicologa</p>
               </div>
             </div>
