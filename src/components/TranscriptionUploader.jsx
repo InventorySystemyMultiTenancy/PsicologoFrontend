@@ -7,6 +7,28 @@ import {
   validateTranscriptionFile,
 } from '../services/transcription'
 
+const EMPTY_ANALYSIS = {
+  kind: 'empty',
+  text: '',
+  structured: {
+    riskLevel: '',
+    mainThemes: [],
+    recommendedNextSteps: [],
+    clinicalObservations: '',
+    warningSigns: [],
+  },
+  hasAnalysis: false,
+  analysisError: '',
+}
+
+const INITIAL_RESULT = {
+  text: '',
+  summary: '',
+  analysis: EMPTY_ANALYSIS,
+  analysisStatus: 'idle',
+  analysisError: '',
+}
+
 function formatFileSize(bytes) {
   if (!bytes) {
     return '0 MB'
@@ -19,24 +41,10 @@ function formatFileSize(bytes) {
 export default function TranscriptionUploader() {
   const [selectedFile, setSelectedFile] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [result, setResult] = useState({
-    text: '',
-    summary: '',
-    analysis: {
-      kind: 'empty',
-      text: '',
-      structured: {
-        riskLevel: '',
-        mainThemes: [],
-        recommendedNextSteps: [],
-        clinicalObservations: '',
-        warningSigns: [],
-      },
-      hasAnalysis: false,
-      analysisError: '',
-    },
-  })
+  const [result, setResult] = useState(INITIAL_RESULT)
   const [errorMessage, setErrorMessage] = useState('')
+  const [errorTechnicalMessage, setErrorTechnicalMessage] = useState('')
+  const [canRetry, setCanRetry] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [successMessage, setSuccessMessage] = useState('')
 
@@ -44,23 +52,9 @@ export default function TranscriptionUploader() {
     const file = event.target.files?.[0] || null
 
     setSuccessMessage('')
-    setResult({
-      text: '',
-      summary: '',
-      analysis: {
-        kind: 'empty',
-        text: '',
-        structured: {
-          riskLevel: '',
-          mainThemes: [],
-          recommendedNextSteps: [],
-          clinicalObservations: '',
-          warningSigns: [],
-        },
-        hasAnalysis: false,
-        analysisError: '',
-      },
-    })
+    setResult(INITIAL_RESULT)
+    setCanRetry(false)
+    setErrorTechnicalMessage('')
 
     if (!file) {
       setSelectedFile(null)
@@ -95,47 +89,48 @@ export default function TranscriptionUploader() {
     try {
       setIsLoading(true)
       setErrorMessage('')
+      setErrorTechnicalMessage('')
+      setCanRetry(false)
       setSuccessMessage('')
       setUploadProgress(0)
 
       const response = await uploadTranscriptionAudio(selectedFile, setUploadProgress)
 
-      setResult({
-        text: response.text || '',
-        summary: response.summary || '',
-        analysis: response.analysis,
-      })
+      setResult(response)
       setSuccessMessage('Transcricao concluida com sucesso.')
     } catch (error) {
+      if (error?.partialResult?.text || error?.partialResult?.summary) {
+        setResult((prev) => ({
+          ...prev,
+          ...error.partialResult,
+        }))
+      }
+
       setErrorMessage(
-        error.message ||
+        error?.userMessage ||
           'Nao foi possivel transcrever o arquivo agora. Tente novamente em instantes.',
       )
+      setErrorTechnicalMessage(error?.technicalMessage || '')
+      setCanRetry(Boolean(error?.isRetryable))
     } finally {
       setIsLoading(false)
     }
   }
 
+  function onRetry() {
+    if (!canRetry || !selectedFile || isLoading) {
+      return
+    }
+
+    onSend()
+  }
+
   function onClear() {
     setSelectedFile(null)
-    setResult({
-      text: '',
-      summary: '',
-      analysis: {
-        kind: 'empty',
-        text: '',
-        structured: {
-          riskLevel: '',
-          mainThemes: [],
-          recommendedNextSteps: [],
-          clinicalObservations: '',
-          warningSigns: [],
-        },
-        hasAnalysis: false,
-        analysisError: '',
-      },
-    })
+    setResult(INITIAL_RESULT)
     setErrorMessage('')
+    setErrorTechnicalMessage('')
+    setCanRetry(false)
     setSuccessMessage('')
     setUploadProgress(0)
   }
@@ -163,7 +158,7 @@ export default function TranscriptionUploader() {
             disabled={!selectedFile || isLoading}
             className="rounded-xl bg-brand-700 px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-900 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isLoading ? 'Transcrevendo...' : 'Enviar para Transcricao'}
+            {isLoading ? 'Transcrevendo e analisando...' : 'Enviar para Transcricao'}
           </button>
 
           <button
@@ -204,7 +199,20 @@ export default function TranscriptionUploader() {
 
         {errorMessage ? (
           <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
-            {errorMessage}
+            <p>{errorMessage}</p>
+            {canRetry ? (
+              <button
+                type="button"
+                onClick={onRetry}
+                disabled={isLoading}
+                className="mt-3 rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Tentar novamente
+              </button>
+            ) : null}
+            {errorTechnicalMessage ? (
+              <p className="mt-2 text-xs text-rose-700/90">Detalhes tecnicos: {errorTechnicalMessage}</p>
+            ) : null}
           </div>
         ) : null}
 
@@ -301,7 +309,7 @@ export default function TranscriptionUploader() {
                 Analise indisponivel no momento: {result.analysis.analysisError}
               </p>
             ) : result.text ? (
-              <p className="text-slate-600">Nenhuma analise retornada pela IA.</p>
+              <p className="text-slate-600">Analise indisponivel no momento.</p>
             ) : (
               <EmptyState message="A analise de IA sera exibida aqui quando for retornada pela API." />
             )}
