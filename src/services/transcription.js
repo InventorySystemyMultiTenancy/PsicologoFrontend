@@ -22,6 +22,7 @@ const ALLOWED_EXTENSIONS = new Set([
 
 const ALLOWED_MIME_TYPES = new Set([
   'audio/mpeg',
+  'audio/mp3.mpeg',
   'audio/mp3',
   'audio/mpga',
   'audio/wav',
