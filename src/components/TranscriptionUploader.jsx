@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import EmptyState from './EmptyState'
 import {
   MAX_AUDIO_FILE_SIZE_BYTES,
@@ -46,7 +46,33 @@ export default function TranscriptionUploader() {
   const [errorTechnicalMessage, setErrorTechnicalMessage] = useState('')
   const [canRetry, setCanRetry] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [displayProgress, setDisplayProgress] = useState(0)
+  const [progressPhase, setProgressPhase] = useState('idle')
+  const [processingStartedAt, setProcessingStartedAt] = useState(null)
+  const [isProgressComplete, setIsProgressComplete] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
+
+  useEffect(() => {
+    if (!isLoading || progressPhase !== 'processing' || !processingStartedAt) {
+      return undefined
+    }
+
+    const intervalId = setInterval(() => {
+      const elapsed = Date.now() - processingStartedAt
+
+      let nextProgress = 50
+
+      if (elapsed <= 30000) {
+        nextProgress = 50 + (elapsed / 30000) * 30
+      } else {
+        nextProgress = 80 + ((elapsed - 30000) / 60000) * 19
+      }
+
+      setDisplayProgress((prev) => Math.max(prev, Math.min(99, Math.round(nextProgress))))
+    }, 450)
+
+    return () => clearInterval(intervalId)
+  }, [isLoading, progressPhase, processingStartedAt])
 
   function onSelectFile(event) {
     const file = event.target.files?.[0] || null
@@ -93,10 +119,33 @@ export default function TranscriptionUploader() {
       setCanRetry(false)
       setSuccessMessage('')
       setUploadProgress(0)
+      setDisplayProgress(0)
+      setProgressPhase('uploading')
+      setProcessingStartedAt(null)
+      setIsProgressComplete(false)
 
-      const response = await uploadTranscriptionAudio(selectedFile, setUploadProgress)
+      const response = await uploadTranscriptionAudio(selectedFile, (percent) => {
+        setUploadProgress(percent)
+
+        const uploadMappedProgress = Math.min(50, Math.round(percent * 0.5))
+        setDisplayProgress((prev) => Math.max(prev, uploadMappedProgress))
+
+        if (percent >= 100) {
+          setProgressPhase((prevPhase) => {
+            if (prevPhase === 'processing') {
+              return prevPhase
+            }
+
+            setProcessingStartedAt(Date.now())
+            return 'processing'
+          })
+        }
+      })
 
       setResult(response)
+      setDisplayProgress(100)
+      setProgressPhase('completed')
+      setIsProgressComplete(true)
       setSuccessMessage('Transcricao concluida com sucesso.')
     } catch (error) {
       if (error?.partialResult?.text || error?.partialResult?.summary) {
@@ -112,6 +161,7 @@ export default function TranscriptionUploader() {
       )
       setErrorTechnicalMessage(error?.technicalMessage || '')
       setCanRetry(Boolean(error?.isRetryable))
+      setProgressPhase('idle')
     } finally {
       setIsLoading(false)
     }
@@ -133,6 +183,10 @@ export default function TranscriptionUploader() {
     setCanRetry(false)
     setSuccessMessage('')
     setUploadProgress(0)
+    setDisplayProgress(0)
+    setProgressPhase('idle')
+    setProcessingStartedAt(null)
+    setIsProgressComplete(false)
   }
 
   return (
@@ -185,14 +239,30 @@ export default function TranscriptionUploader() {
         {isLoading ? (
           <div className="mt-4">
             <div className="mb-1 flex items-center justify-between text-xs text-slate-500">
-              <span>Enviando arquivo...</span>
-              <span>{uploadProgress}%</span>
+              <span>
+                {progressPhase === 'uploading'
+                  ? 'Enviando arquivo...'
+                  : 'Processando transcricao e analise...'}
+              </span>
+              <span>{displayProgress}%</span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
               <div
-                className="h-full rounded-full bg-brand-700 transition-all"
-                style={{ width: `${uploadProgress}%` }}
+                className={`h-full rounded-full transition-all ${
+                  isProgressComplete ? 'bg-emerald-600' : 'bg-brand-700'
+                }`}
+                style={{ width: `${displayProgress}%` }}
               />
+            </div>
+          </div>
+        ) : isProgressComplete ? (
+          <div className="mt-4">
+            <div className="mb-1 flex items-center justify-between text-xs text-emerald-700">
+              <span>Transcricao finalizada</span>
+              <span>100%</span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-emerald-100">
+              <div className="h-full w-full rounded-full bg-emerald-600" />
             </div>
           </div>
         ) : null}
@@ -225,7 +295,7 @@ export default function TranscriptionUploader() {
 
       <div className="grid gap-6 xl:grid-cols-1">
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
-          <h3 className="font-heading text-lg font-semibold text-slate-900">Texto Transcrito</h3>
+          <h3 className="font-heading text-lg font-semibold text-slate-900">📝 Transcricao</h3>
           <div className="mt-4 min-h-56 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
             {result.text ? (
               <p className="whitespace-pre-wrap">{result.text}</p>
@@ -236,18 +306,7 @@ export default function TranscriptionUploader() {
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
-          <h3 className="font-heading text-lg font-semibold text-slate-900">Resumo da Reuniao</h3>
-          <div className="mt-4 min-h-56 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
-            {result.summary ? (
-              <p className="whitespace-pre-wrap">{result.summary}</p>
-            ) : (
-              <EmptyState message="O resumo automatico sera exibido aqui." />
-            )}
-          </div>
-        </article>
-
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
-          <h3 className="font-heading text-lg font-semibold text-slate-900">Analise de IA (n8n)</h3>
+          <h3 className="font-heading text-lg font-semibold text-slate-900">🤖 Analise da IA (n8n)</h3>
           <div className="mt-4 min-h-56 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
             {result.analysis.hasAnalysis ? (
               <div className="space-y-4">
