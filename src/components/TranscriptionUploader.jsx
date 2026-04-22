@@ -19,7 +19,23 @@ function formatFileSize(bytes) {
 export default function TranscriptionUploader() {
   const [selectedFile, setSelectedFile] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [result, setResult] = useState({ text: '', summary: '' })
+  const [result, setResult] = useState({
+    text: '',
+    summary: '',
+    analysis: {
+      kind: 'empty',
+      text: '',
+      structured: {
+        riskLevel: '',
+        mainThemes: [],
+        recommendedNextSteps: [],
+        clinicalObservations: '',
+        warningSigns: [],
+      },
+      hasAnalysis: false,
+      analysisError: '',
+    },
+  })
   const [errorMessage, setErrorMessage] = useState('')
   const [uploadProgress, setUploadProgress] = useState(0)
   const [successMessage, setSuccessMessage] = useState('')
@@ -28,7 +44,23 @@ export default function TranscriptionUploader() {
     const file = event.target.files?.[0] || null
 
     setSuccessMessage('')
-    setResult({ text: '', summary: '' })
+    setResult({
+      text: '',
+      summary: '',
+      analysis: {
+        kind: 'empty',
+        text: '',
+        structured: {
+          riskLevel: '',
+          mainThemes: [],
+          recommendedNextSteps: [],
+          clinicalObservations: '',
+          warningSigns: [],
+        },
+        hasAnalysis: false,
+        analysisError: '',
+      },
+    })
 
     if (!file) {
       setSelectedFile(null)
@@ -71,6 +103,7 @@ export default function TranscriptionUploader() {
       setResult({
         text: response.text || '',
         summary: response.summary || '',
+        analysis: response.analysis,
       })
       setSuccessMessage('Transcricao concluida com sucesso.')
     } catch (error) {
@@ -85,7 +118,23 @@ export default function TranscriptionUploader() {
 
   function onClear() {
     setSelectedFile(null)
-    setResult({ text: '', summary: '' })
+    setResult({
+      text: '',
+      summary: '',
+      analysis: {
+        kind: 'empty',
+        text: '',
+        structured: {
+          riskLevel: '',
+          mainThemes: [],
+          recommendedNextSteps: [],
+          clinicalObservations: '',
+          warningSigns: [],
+        },
+        hasAnalysis: false,
+        analysisError: '',
+      },
+    })
     setErrorMessage('')
     setSuccessMessage('')
     setUploadProgress(0)
@@ -166,7 +215,7 @@ export default function TranscriptionUploader() {
         ) : null}
       </article>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-1">
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
           <h3 className="font-heading text-lg font-semibold text-slate-900">Texto Transcrito</h3>
           <div className="mt-4 min-h-56 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
@@ -185,6 +234,76 @@ export default function TranscriptionUploader() {
               <p className="whitespace-pre-wrap">{result.summary}</p>
             ) : (
               <EmptyState message="O resumo automatico sera exibido aqui." />
+            )}
+          </div>
+        </article>
+
+        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
+          <h3 className="font-heading text-lg font-semibold text-slate-900">Analise de IA (n8n)</h3>
+          <div className="mt-4 min-h-56 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
+            {result.analysis.hasAnalysis ? (
+              <div className="space-y-4">
+                {result.analysis.kind === 'string' && result.analysis.text ? (
+                  <p className="whitespace-pre-wrap">{result.analysis.text}</p>
+                ) : null}
+
+                {result.analysis.structured.riskLevel ? (
+                  <p>
+                    <span className="font-semibold">Nivel de risco:</span>{' '}
+                    {result.analysis.structured.riskLevel}
+                  </p>
+                ) : null}
+
+                {result.analysis.structured.mainThemes.length ? (
+                  <div>
+                    <p className="font-semibold">Temas principais</p>
+                    <ul className="mt-2 list-disc space-y-1 pl-5">
+                      {result.analysis.structured.mainThemes.map((theme, index) => (
+                        <li key={`theme-${index}`}>{theme}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                {result.analysis.structured.recommendedNextSteps.length ? (
+                  <div>
+                    <p className="font-semibold">Proximos passos recomendados</p>
+                    <ul className="mt-2 list-disc space-y-1 pl-5">
+                      {result.analysis.structured.recommendedNextSteps.map((step, index) => (
+                        <li key={`step-${index}`}>{step}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                {result.analysis.structured.clinicalObservations ? (
+                  <div>
+                    <p className="font-semibold">Observacoes clinicas</p>
+                    <p className="mt-2 whitespace-pre-wrap">
+                      {result.analysis.structured.clinicalObservations}
+                    </p>
+                  </div>
+                ) : null}
+
+                {result.analysis.structured.warningSigns.length ? (
+                  <div>
+                    <p className="font-semibold">Sinais de alerta</p>
+                    <ul className="mt-2 list-disc space-y-1 pl-5">
+                      {result.analysis.structured.warningSigns.map((warning, index) => (
+                        <li key={`warning-${index}`}>{warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            ) : result.analysis.analysisError ? (
+              <p className="text-amber-700">
+                Analise indisponivel no momento: {result.analysis.analysisError}
+              </p>
+            ) : result.text ? (
+              <p className="text-slate-600">Nenhuma analise retornada pela IA.</p>
+            ) : (
+              <EmptyState message="A analise de IA sera exibida aqui quando for retornada pela API." />
             )}
           </div>
         </article>

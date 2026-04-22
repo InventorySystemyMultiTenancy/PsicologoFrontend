@@ -1,4 +1,5 @@
 import api from './api'
+import { normalizeAnalysis } from '../utils/normalizeAnalysis'
 
 export const TRANSCRIPTION_FILE_ACCEPT =
   '.mp3,.wav,.m4a,.mp4,.aac,.ogg,.webm,audio/*,video/mp4'
@@ -76,9 +77,17 @@ export async function uploadTranscriptionAudio(file, onProgress) {
       },
     })
 
+    const normalizedAnalysis = normalizeAnalysis(data)
+
+    // Debug temporario para inspecionar variações de payload do backend/n8n.
+    console.debug('[transcription] payload completo:', data)
+    console.debug('[transcription] analysis normalizado:', normalizedAnalysis)
+
     return {
       text: data?.text || '',
       summary: data?.summary || '',
+      analysis: normalizedAnalysis,
+      raw: data,
     }
   } catch (error) {
     if (error.message === 'Network Error') {
