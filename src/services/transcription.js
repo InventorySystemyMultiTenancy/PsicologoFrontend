@@ -6,7 +6,7 @@ import { mapApiError } from '../utils/mapApiError'
 export const TRANSCRIPTION_FILE_ACCEPT =
   '.mp3,.wav,.m4a,.mp4,.aac,.ogg,.webm,audio/*,video/mp4'
 
-export const MAX_AUDIO_FILE_SIZE_BYTES = 50 * 1024 * 1024
+export const MAX_AUDIO_FILE_SIZE_BYTES = 500 * 1024 * 1024
 const TRANSCRIPTION_TIMEOUT_MS = 180000
 const MAX_RETRY_ATTEMPTS = 2
 
@@ -51,7 +51,7 @@ export function validateTranscriptionFile(file) {
   }
 
   if (file.size > MAX_AUDIO_FILE_SIZE_BYTES) {
-    return 'Arquivo maior que 50MB. Selecione um arquivo menor.'
+    return 'Arquivo maior que 500MB. Selecione um arquivo menor.'
   }
 
   const extension = getFileExtension(file.name)

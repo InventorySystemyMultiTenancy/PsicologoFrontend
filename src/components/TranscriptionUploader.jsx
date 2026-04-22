@@ -306,7 +306,7 @@ export default function TranscriptionUploader() {
         </article>
 
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
-          <h3 className="font-heading text-lg font-semibold text-slate-900">🤖 Analise da IA (n8n)</h3>
+          <h3 className="font-heading text-lg font-semibold text-slate-900">🤖 Analise da IA </h3>
           <div className="mt-4 min-h-56 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
             {result.analysis.hasAnalysis ? (
               <div className="space-y-4">
