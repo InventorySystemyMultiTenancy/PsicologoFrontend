@@ -103,7 +103,7 @@ export default function AppLayout() {
               </div>
               <div className="text-sm">
                 <p className="font-semibold text-slate-900">Dr. Fernando F. Da Silva</p>
-                <p className="text-slate-500">Psicologa</p>
+                <p className="text-slate-500">Psicólogo</p>
               </div>
             </div>
           </div>
